@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#191d1b">
+  <meta name="description" content="A Horde chess engine that runs in your browser. Play the army, command the horde, and explore every move.">
+  <title>Horde · Engine studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23191d1b'/%3E%3Cpath d='M8 20v8h4v-8l-1-4h-2zM14 12v16h4V12l-1-5h-2zM20 20v8h4v-8l-1-4h-2z' fill='%23d4e8a1'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Horde home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>HORDE<span class="brand-divider">/</span><span class="brand-subtitle">ENGINE STUDIO</span></span>
+      </a>
+      <div class="local-badge"><span class="status-dot" id="engine-dot"></span> In your browser <span class="badge-divider">·</span> <span id="evaluator-label">Bastion-3</span></div>
+    </header>
+
+    <main>
+      <div class="workspace-heading">
+        <div><p class="eyebrow">36 PAWNS. ONE KING.</p><h1>A different kind of chess.</h1></div>
+        <button class="button button-quiet new-game" id="new-game"><span data-icon="plus"></span> New game</button>
+      </div>
+
+      <div class="workspace">
+        <section class="board-column" aria-label="Chess game">
+          <div class="player-strip top-player" id="top-player"></div>
+          <div class="board-frame">
+            <div class="evaluation-bar" id="evaluation-bar" role="img" aria-label="Position evaluation pending"><div class="evaluation-white"></div><span class="evaluation-tick"></span></div>
+            <div class="board" id="board" role="group" aria-label="Horde chess board"></div>
+          </div>
+          <div class="player-strip bottom-player" id="bottom-player"></div>
+          <div class="board-toolbar">
+            <div class="board-caption"><span class="status-dot" id="position-dot"></span><span id="position-status" aria-live="polite">Loading the engine…</span></div>
+            <div class="board-actions">
+              <button class="resign-button" id="resign" title="Resign this game" disabled><span data-icon="flag"></span> Resign</button>
+              <button class="icon-button" id="undo" title="Undo your last turn" aria-label="Undo your last turn"><span data-icon="undo"></span></button>
+              <span class="toolbar-divider"></span>
+              <button class="icon-button" id="flip" title="Flip board (F)" aria-label="Flip board"><span data-icon="flip"></span></button>
+            </div>
+          </div>
+          <div class="board-note"><span data-icon="spark"></span><p>The horde wins by checkmate. The army wins by taking every White piece.</p></div>
+        </section>
+
+        <aside class="sidebar" aria-label="Engine and game controls">
+          <section class="control-panel">
+            <div class="mode-tabs" role="tablist" aria-label="Game mode">
+              <button id="mode-play" role="tab" aria-selected="true" class="active"><span data-icon="play"></span> Play the engine</button>
+              <button id="mode-analyze" role="tab" aria-selected="false"><span data-icon="activity"></span> Analyze</button>
+            </div>
+            <div class="game-settings">
+              <div class="setting-row" id="side-setting"><span class="setting-label">You play</span><div class="side-switch" role="group" aria-label="Your side"><button id="side-white" class="active" aria-pressed="true"><span class="side-token white-token"></span> Horde</button><button id="side-black" aria-pressed="false"><span class="side-token black-token"></span> Army</button></div></div>
+              <div class="setting-row"><label class="setting-label" for="engine-select">Engine</label><div class="select-wrap"><select id="engine-select"><option value="hce">HCE</option><option value="bastion-1">Bastion-1</option><option value="bastion-2">Bastion-2</option><option value="bastion-3" selected>Bastion-3</option><option value="student-250ms">Student-250ms</option></select><span data-icon="chevron-down"></span></div></div>
+              <div class="setting-row"><label class="setting-label" for="think-time">Time per move</label><div class="select-wrap"><select id="think-time"><option value="100">0.1 seconds</option><option value="250" selected>0.25 seconds</option><option value="500">0.5 seconds</option><option value="1000">1 second</option><option value="3000">3 seconds</option><option value="10000">10 seconds</option></select><span data-icon="chevron-down"></span></div></div>
+              <p class="mode-description" id="mode-description">Command the pawns. Find a way through.</p>
+            </div>
+          </section>
+
+          <section class="engine-panel" aria-label="Live engine analysis">
+            <div class="panel-heading"><h2>POSITION EVALUATION</h2><span class="search-indicator" id="search-indicator"><span></span><span id="search-status">Ready</span></span></div>
+            <div class="evaluation-main"><div><div class="score" id="score">—</div><div class="score-description" id="score-description">Finding the balance</div></div><button class="button best-move-button" id="best-move" disabled title="Play the engine’s best move"><span data-icon="arrow-up-right"></span> Play best</button></div>
+            <div class="engine-stats"><div><span>DEPTH</span><strong id="stat-depth">—</strong></div><div><span>NODES</span><strong id="stat-nodes">—</strong></div><div><span>NODES / S</span><strong id="stat-nps">—</strong></div><div><span>TIME</span><strong id="stat-time">—</strong></div></div>
+            <div class="principal-variation"><span class="pv-label">BEST LINE</span><p id="pv">Analysis will appear here.</p></div>
+            <p class="eval-explanation">Positive scores favor the White horde.</p>
+          </section>
+
+          <section class="moves-panel" aria-label="Game history">
+            <div class="panel-heading"><h2>MOVE HISTORY</h2><span class="move-counter" id="move-counter">0 moves</span></div>
+            <div class="review-toolbar"><button id="review-game" aria-pressed="false" disabled><span data-icon="activity"></span><span id="review-label">Review game</span></button><span id="review-progress">Analyze every position</span></div>
+            <div class="move-list" id="move-list"><div class="empty-history"><span class="empty-history-mark" aria-hidden="true">♙</span><p>Every pawn has potential.</p><span>Make your first move to begin.</span></div></div>
+            <div class="history-navigation"><button class="icon-button" id="first-move" title="Initial position (Home)" aria-label="Go to initial position"><span data-icon="skip-back"></span></button><button class="icon-button" id="previous-move" title="Previous move (←)" aria-label="Previous move"><span data-icon="chevron-left"></span></button><span id="move-position">START POSITION</span><button class="icon-button" id="next-move" title="Next move (→)" aria-label="Next move"><span data-icon="chevron-right"></span></button><button class="icon-button" id="last-move" title="Latest position (End)" aria-label="Go to latest position"><span data-icon="skip-forward"></span></button></div>
+            <div class="graph-wrapper"><div class="graph-heading"><span>GAME BALANCE</span><span id="graph-caption">Build a picture, move by move</span></div><svg id="eval-graph" viewBox="0 0 340 58" role="img" aria-label="Evaluation graph; no analyzed positions yet" preserveAspectRatio="none"><line x1="0" y1="29" x2="340" y2="29" class="graph-zero"/></svg></div>
+            <div class="game-tools"><button id="fen-open"><span data-icon="brackets"></span> FEN</button><button id="pgn-open"><span data-icon="upload"></span> Import PGN</button><button id="pgn-export"><span data-icon="download"></span> Export</button></div>
+          </section>
+        </aside>
+      </div>
+      <footer class="site-footer"><span>Small engine. Endless possibilities.</span><span>Alpha–beta search <i>·</i> <span id="evaluator-description">Handcrafted evaluation</span> <i>·</i> <span id="engine-note">WebAssembly in your browser</span></span></footer>
+    </main>
+  </div>
+
+  <dialog id="promotion-dialog" class="dialog promotion-dialog"><div class="dialog-top"><div><p class="eyebrow">A PAWN’S MOMENT</p><h2>Choose your promotion</h2></div><button class="icon-button" data-close="promotion-dialog" aria-label="Cancel promotion"><span data-icon="close"></span></button></div><div id="promotion-options" class="promotion-options"></div></dialog>
+  <dialog id="fen-dialog" class="dialog"><div class="dialog-top"><div><p class="eyebrow">EXPLORE A POSITION</p><h2>Position from FEN</h2></div><button class="icon-button" data-close="fen-dialog" aria-label="Close FEN dialog"><span data-icon="close"></span></button></div><p class="dialog-description">Paste a Horde position to start a new analysis. Your current position is shown below.</p><label class="sr-only" for="fen-input">FEN position</label><textarea id="fen-input" rows="3" spellcheck="false" autocomplete="off"></textarea><p class="dialog-error" id="fen-error" role="alert"></p><div class="dialog-footer"><button class="button button-quiet" id="fen-copy"><span data-icon="copy"></span> Copy FEN</button><button class="button button-primary" id="fen-load">Load position <span data-icon="arrow-right"></span></button></div></dialog>
+  <dialog id="pgn-dialog" class="dialog"><div class="dialog-top"><div><p class="eyebrow">LOOK A LITTLE DEEPER</p><h2>Import a game</h2></div><button class="icon-button" data-close="pgn-dialog" aria-label="Close PGN dialog"><span data-icon="close"></span></button></div><p class="dialog-description">Paste a Horde PGN, or open a saved file. Step through the moves to analyze each position.</p><label class="sr-only" for="pgn-input">PGN game</label><textarea id="pgn-input" rows="8" spellcheck="false" placeholder='[Variant "Horde"]&#10;&#10;1. b6 axb6 2. c6 ...'></textarea><p class="dialog-error" id="pgn-error" role="alert"></p><div class="dialog-footer"><label class="button button-quiet file-label" for="pgn-file"><span data-icon="upload"></span> Open file<input type="file" id="pgn-file" accept=".pgn,.txt,text/plain" hidden></label><button class="button button-primary" id="pgn-import">Import game <span data-icon="arrow-right"></span></button></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

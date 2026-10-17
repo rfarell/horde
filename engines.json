@@ -1,0 +1,40 @@
+{
+  "schema": "horde-engines-v1",
+  "default": "bastion-3",
+  "rating_source": "18-engine round robin, 2026-09-13: 512 games per pair at 250 ms/move, BayesElo with bastion-1 = 2000",
+  "engines": {
+    "hce": {
+      "description": "Hand-coded evaluation (engine v067) with alpha-beta search; the generation-0 teacher",
+      "network": null,
+      "rating": 1814
+    },
+    "bastion-1": {
+      "description": "First pawn-pair NNUE: network C lifted to HORNNUE3 and fit on the 610k-position corpus",
+      "network": "networks/bastion-1.nnue",
+      "sha256": "79c29fe390d316d0ef11cf582f72ef0a49798d387ca58ac674f3eef01c953d47",
+      "nnue_weight": 50,
+      "rating": 2000
+    },
+    "bastion-2": {
+      "description": "Fit on the cumulative 9.21M-position corpus; teacher for the 12.21M and 22.21M corpora",
+      "network": "networks/bastion-2.nnue",
+      "sha256": "a6dfef47f963c3f970bcc4ec2764cc25c8476581f85a9f5692bed39dc74023e8",
+      "nnue_weight": 50,
+      "rating": 2101
+    },
+    "bastion-3": {
+      "description": "Fit on 22.21M positions, mostly labeled by Bastion-2 at 5 s/search; the named champion",
+      "network": "networks/bastion-3.nnue",
+      "sha256": "e5562eed021b70b2b67a9a38e5674d0b4d56550eae2b35882d7f60c7e740e977",
+      "nnue_weight": 50,
+      "rating": 2125
+    },
+    "student-250ms": {
+      "description": "Same 22.21M positions relabeled by Bastion-3 at 250 ms/search (20x less search); tied with Bastion-3",
+      "network": "networks/student-250ms.nnue",
+      "sha256": "45d811b0537d5190d68a592cd3542b781a4b64795f3f2ab198caa1799b74615e",
+      "nnue_weight": 50,
+      "rating": 2127
+    }
+  }
+}

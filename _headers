@@ -1,0 +1,9 @@
+# Cloudflare Pages response headers. The site is self-contained: no server
+# code, no cross-origin requests, no SharedArrayBuffer, so no isolation
+# headers are needed. Pages already serves .wasm as application/wasm and
+# revalidates every asset with an ETag, so a redeploy never pairs a stale
+# engine with a new page.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin
+  X-Frame-Options: DENY
