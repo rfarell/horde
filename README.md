@@ -6,6 +6,9 @@ time, no third-party scripts. Pick an engine (HCE, Bastion-1, Bastion-2,
 Bastion-3, Student-250ms), play either colour, undo, start a new game, import
 and export PGN, review a game, and watch the search report each iteration.
 
+Play it at <https://rfarell.github.io/horde/>. That site is this folder, mirrored
+to the public repository `rfarell/horde` and served by GitHub Pages.
+
 ## Files
 
 | File | Role |
@@ -19,6 +22,8 @@ and export PGN, review a game, and watch the search report each iteration.
 | `networks/*.nnue` | The four bundled networks, 370 KB each, copied from `engines/networks/`. |
 | `engines.json` | Descriptions and ratings for the picker, copied from `engines/engines.json`. |
 | `_headers` | Cloudflare Pages response headers. |
+| `.nojekyll` | Tells GitHub Pages to serve the folder as is (Jekyll would drop `_headers`). |
+| `LICENSE` | MIT, a copy of the repository's license, so the public mirror carries one. |
 | `build.sh` | Builds both modules, copies networks and catalogue, runs the smoke test. |
 | `test/wasm_smoke.mjs` | Node test: wasm against the native engine, byte for byte. |
 | `test/wasm_bench.mjs` | Node benchmark: nodes per second, wasm against native. |
@@ -60,6 +65,22 @@ cd site && python3 -m http.server 8000
 Then open <http://127.0.0.1:8000/>. Any static server works; the page uses
 relative URLs, so it can live under a subpath. A module worker and
 `WebAssembly` are the only requirements (Chrome 80+, Firefox 114+, Safari 15+).
+
+## Publish to GitHub Pages
+
+The public repository `rfarell/horde` holds only this folder and serves it at
+<https://rfarell.github.io/horde/>. It is written from here, never edited
+there. After `site/build.sh` and a commit on `main`:
+
+```sh
+git remote add pages git@github.com:rfarell/horde.git   # once
+git subtree push --prefix=site pages main
+```
+
+`git subtree` rewrites the history of `site/` as the mirror's `main`, so the
+public repository shows the site's own commits and nothing else from this one.
+GitHub Pages serves `.wasm` as `application/wasm`; the page fetches the module
+and compiles it from bytes anyway, so the content type does not matter.
 
 ## Deploy to Cloudflare Pages
 
