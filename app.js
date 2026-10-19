@@ -90,7 +90,7 @@ function playEndedByResignation() { return model.mode === 'play' && resignedAtCu
 function displayState() {
   if (!model.state || !playEndedByResignation()) return model.state;
   return { ...model.state, status: model.resignedSide === 'w' ? 'black-win' : 'white-win',
-    reason: `${model.resignedSide === 'w' ? 'White' : 'Black'} resigned` };
+    reason: `${model.resignedSide === 'w' ? 'The horde' : 'The army'} resigned` };
 }
 function canMove() {
   return model.state?.status === 'playing' && !model.loading && !playEndedByResignation() &&
@@ -218,7 +218,7 @@ function renderPlayer(side, id) {
   const isTurn = model.state?.turn === side && displayState()?.status === 'playing';
   const isHuman = model.mode === 'play' && model.humanSide === side;
   const engineName = ENGINES[model.engine]?.label || 'Horde engine';
-  const detail = model.mode === 'analyze' ? (horde ? 'White · 36-pawn horde' : 'Black · Classical army') : isHuman ? 'You' : engineName;
+  const detail = model.mode === 'analyze' ? (horde ? 'White' : 'Black') : isHuman ? 'You' : engineName;
   const turnLabel = model.searching && isEngineTurn() && isTurn ? 'Thinking' : isHuman ? 'Your turn' : 'To move';
   $(id).innerHTML = `<div class="player-identity"><div class="player-avatar">${pieceSVG(horde ? 'P' : 'k')}</div><div><div class="player-name">${horde ? 'The Horde' : 'The Army'}</div><div class="player-detail">${escapeHTML(detail)}</div></div></div><div class="player-right"><span class="player-count">${count ?? '—'} ${count === 1 ? 'piece' : 'pieces'}</span>${isTurn ? `<span class="player-turn ${model.searching && isEngineTurn() ? 'thinking' : ''}"><span class="status-dot"></span>${turnLabel}</span>` : ''}</div>`;
 }
@@ -236,15 +236,15 @@ function renderControls() {
   const analyzing = model.mode === 'analyze';
   $('mode-play').classList.toggle('active', !analyzing);
   $('mode-analyze').classList.toggle('active', analyzing);
-  $('mode-play').setAttribute('aria-selected', String(!analyzing));
-  $('mode-analyze').setAttribute('aria-selected', String(analyzing));
+  $('mode-play').setAttribute('aria-pressed', String(!analyzing));
+  $('mode-analyze').setAttribute('aria-pressed', String(analyzing));
   $('side-setting').hidden = analyzing;
   $('side-white').classList.toggle('active', model.humanSide === 'w');
   $('side-black').classList.toggle('active', model.humanSide === 'b');
   $('side-white').setAttribute('aria-pressed', String(model.humanSide === 'w'));
   $('side-black').setAttribute('aria-pressed', String(model.humanSide === 'b'));
   $('think-time').value = String(model.time);
-  $('mode-description').textContent = analyzing ? 'Explore both sides. Every position is analyzed in your browser.' : model.humanSide === 'w' ? 'Command the pawns. Find a way through.' : 'Lead the army. Hold back the horde.';
+  $('mode-description').textContent = analyzing ? 'Move either side. Every position is analyzed as you go.' : model.humanSide === 'w' ? 'You play the horde. The engine answers each move.' : 'You play the army. The engine answers each move.';
   $('best-move').disabled = model.loading || !model.analysis?.bestMove || state?.status !== 'playing';
   $('undo').disabled = model.loading || !model.cursor;
   $('resign').hidden = analyzing;
@@ -266,9 +266,9 @@ function renderControls() {
   else if (model.engineLoading && state) status = `Loading ${engine.label}…`;
   else if (state) {
     if (state.status !== 'playing') status = terminalDescription(state);
-    else if (model.cursor < model.line.length) status = 'Reviewing game · move to branch from here';
-    else if (analyzing) status = `${state.turn === 'w' ? 'White' : 'Black'} to move${state.check ? ' · Check' : ''}`;
-    else if (isEngineTurn()) status = `${state.turn === 'w' ? 'The horde' : 'The army'} is thinking…`;
+    else if (model.cursor < model.line.length) status = 'Earlier position · play a move to branch from here';
+    else if (analyzing) status = `${state.turn === 'w' ? 'Horde' : 'Army'} to move${state.check ? ' · Check' : ''}`;
+    else if (isEngineTurn()) status = `${state.turn === 'w' ? 'The horde' : 'The army'} is thinking${state.check ? ' · Check' : '…'}`;
     else status = `Your move${state.check ? ' · Your king is in check' : ''}`;
   }
   $('position-status').textContent = status;
@@ -284,19 +284,19 @@ function terminalDescription(state) {
 function resultFromStatus(status) { return ({ 'white-win': '1-0', 'black-win': '0-1', draw: '1/2-1/2' })[status] || '*'; }
 function formatCount(value) {
   if (!Number.isFinite(value)) return '—';
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}m`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(value >= 100000 ? 0 : 1)}k`;
   return String(value);
 }
 function scoreText(info) {
   if (!info) return '—';
-  if (info.mate !== null && info.mate !== undefined) return `${info.mate < 0 ? '−' : '+'}M${Math.abs(info.mate)}`;
+  if (info.mate !== null && info.mate !== undefined) return `${info.mate < 0 ? '−' : ''}M${Math.abs(info.mate)}`;
   const value = Number(info.score) / 100;
   return `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(2)}`;
 }
 function describeScore(info) {
   if (!info) return 'Finding the balance';
-  if (info.mate !== null && info.mate !== undefined) return info.mate >= 0 ? 'Checkmate for the horde' : 'Winning line for the army';
+  if (info.mate !== null && info.mate !== undefined) return info.mate >= 0 ? 'Forced win for the horde' : 'Forced win for the army';
   const score = Number(info.score);
   if (Math.abs(score) < 35) return 'An even position';
   return score > 0 ? (score > 200 ? 'Horde advantage' : 'The horde has an edge') : (score < -200 ? 'Army advantage' : 'The army has an edge');
@@ -320,7 +320,7 @@ function renderAnalysis() {
       const prefix = side === 'w' ? `${moveNumber}. ` : index === 0 ? `${moveNumber}… ` : '';
       if (side === 'b') moveNumber++;
       side = side === 'w' ? 'b' : 'w';
-      return `<span class="pv-number">${prefix}</span>${escapeHTML(move.san || move.uci)}`;
+      return `<span class="pv-move"><span class="pv-number">${prefix}</span>${escapeHTML(move.san || move.uci)}</span>`;
     }).join(' ') + (pv.length > 8 ? ' …' : '');
     $('pv').title = pv.map(move => move.san || move.uci).join(' ');
   } else {
@@ -331,7 +331,7 @@ function renderAnalysis() {
   if (over) whiteShare = state.status === 'white-win' ? 100 : state.status === 'black-win' ? 0 : 50;
   else if (info) whiteShare = info.mate !== null && info.mate !== undefined ? (info.mate >= 0 ? 99 : 1) : 50 + 47 * Math.tanh(Number(info.score) / 650);
   $('evaluation-bar').querySelector('.evaluation-white').style.height = `${whiteShare}%`;
-  $('evaluation-bar').setAttribute('aria-label', over ? terminalDescription(state) : info ? `White evaluation ${scoreText(info)} pawns. ${describeScore(info)}.` : 'Position evaluation pending');
+  $('evaluation-bar').setAttribute('aria-label', over ? terminalDescription(state) : info ? `Horde evaluation ${scoreText(info)} pawns. ${describeScore(info)}.` : 'Position evaluation pending');
   renderControls();
 }
 
@@ -356,7 +356,7 @@ function renderHistory() {
       const score = model.scores.get(move.fen);
       const info = model.evaluations.get(move.fen);
       const label = info ? scoreText(info) : Number.isFinite(score) ? `${score < 0 ? '−' : '+'}${(Math.abs(score) / 100).toFixed(1)}` : '';
-      return `<button class="move-button ${move.ply === model.cursor ? 'active' : ''} ${move.ply > model.cursor ? 'future' : ''}" data-ply="${move.ply}" ${move.ply === model.cursor ? 'aria-current="step"' : ''} title="${escapeHTML(move.uci)}${label ? ` · White evaluation ${label}` : ''}"><span>${escapeHTML(move.san || move.uci)}</span>${label ? `<span class="move-eval">${label}</span>` : ''}</button>`;
+      return `<button class="move-button ${move.ply === model.cursor ? 'active' : ''} ${move.ply > model.cursor ? 'future' : ''}" data-ply="${move.ply}" ${move.ply === model.cursor ? 'aria-current="step"' : ''} title="${escapeHTML(move.uci)}${label ? ` · Horde evaluation ${label}` : ''}"><span>${escapeHTML(move.san || move.uci)}</span>${label ? `<span class="move-eval">${label}</span>` : ''}</button>`;
     };
     list.innerHTML = moveRows().map(row => `<div class="move-row"><span class="move-number">${row.number}.</span>${moveButton(row.w)}${moveButton(row.b)}</div>`).join('');
     const active = list.querySelector('.active');
@@ -365,10 +365,10 @@ function renderHistory() {
       if (top < list.scrollTop || top + active.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = Math.max(0, top - list.clientHeight / 2);
     }
   } else {
-    list.innerHTML = '<div class="empty-history"><span class="empty-history-mark" aria-hidden="true">♙</span><p>Every pawn has potential.</p><span>Make your first move to begin.</span></div>';
+    list.innerHTML = '<div class="empty-history"><span class="empty-history-mark" aria-hidden="true">♙</span><p>No moves yet.</p><span>Make a move to begin.</span></div>';
   }
-  $('move-counter').textContent = `${model.line.length} ${model.line.length === 1 ? 'ply' : 'plies'}`;
-  $('move-position').textContent = model.cursor === 0 ? 'START POSITION' : `${model.cursor} / ${model.line.length} PLIES`;
+  $('move-counter').textContent = `${model.line.length} ${model.line.length === 1 ? 'half-move' : 'half-moves'}`;
+  $('move-position').textContent = model.cursor === 0 ? 'Start' : `${model.cursor} / ${model.line.length}`;
   renderGraph();
 }
 function renderGraph() {
@@ -379,10 +379,11 @@ function renderGraph() {
     const score = model.scores.get(fen);
     if (Number.isFinite(score)) points.push({ x: 3 + (ply / span) * 334, y: 29 - 25 * Math.tanh(score / 650), ply });
   });
-  let svg = '<defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#aeca82" stop-opacity=".17"/><stop offset="100%" stop-color="#aeca82" stop-opacity=".015"/></linearGradient></defs><line x1="0" y1="29" x2="340" y2="29" class="graph-zero"/>';
+  let svg = '<line x1="0" y1="29" x2="340" y2="29" class="graph-zero"/>';
   if (points.length > 1) {
     const coords = points.map(point => `${point.x},${point.y}`).join(' ');
-    svg += `<polygon points="${points[0].x},58 ${coords} ${points[points.length - 1].x},58" fill="url(#graph-fill)"/><polyline points="${coords}" class="graph-line"/>`;
+    // Shade the band between the line and the zero line, so an advantage reads as area above or below even.
+    svg += `<polygon points="${points[0].x},29 ${coords} ${points[points.length - 1].x},29" fill="#4e7a3a" fill-opacity=".14"/><polyline points="${coords}" class="graph-line"/>`;
   }
   const cursorX = 3 + (model.cursor / span) * 334;
   if (model.line.length) svg += `<line x1="${cursorX}" y1="2" x2="${cursorX}" y2="56" class="graph-cursor"/>`;
@@ -390,8 +391,9 @@ function renderGraph() {
   if (active) svg += `<circle cx="${active.x}" cy="${active.y}" r="3.5" class="graph-dot"/>`;
   else if (points.length === 1) svg += `<circle cx="${points[0].x}" cy="${points[0].y}" r="2.5" class="graph-dot"/>`;
   $('eval-graph').innerHTML = svg;
-  $('eval-graph').setAttribute('aria-label', `White evaluation across ${points.length} analyzed positions. Click to navigate the game.`);
-  $('graph-caption').textContent = points.length > 1 ? `${points.length} positions analyzed` : 'Build a picture, move by move';
+  $('eval-graph').classList.toggle('has-points', model.line.length > 0);
+  $('eval-graph').setAttribute('aria-label', `Horde evaluation across ${points.length} analyzed positions. Click to navigate the game.`);
+  $('graph-caption').textContent = points.length > 1 ? `${points.length} positions analyzed` : 'Scores appear as positions are analyzed';
 }
 function render() { renderBoard(); renderControls(); renderAnalysis(); renderHistory(); }
 
@@ -479,7 +481,7 @@ async function reviewGame() {
     }
     model.reviewing = false;
     renderControls();
-    toast(`Reviewed all ${fens.length} positions. Select any move to explore.`);
+    toast(`Reviewed all ${fens.length} positions in Analyze mode. Select any move to explore, or choose Play to continue.`);
   } catch (error) {
     if (version !== reviewVersion) return;
     stopReview(); renderControls(); toast(error.message, true);
@@ -765,7 +767,7 @@ $('pgn-import').addEventListener('click', async () => {
     const loaded = await position({ startFen: game.startFen, moves, cursor: moves.length, mode: 'analyze', clearScores: true });
     if (loaded) {
       model.result = game.result || resultFromStatus(model.state.status); persist();
-      $('pgn-dialog').close(); toast(`Imported ${moves.length} plies. Use the arrow keys to explore.`);
+      $('pgn-dialog').close(); toast(`Imported ${moves.length} half-moves. Step through them in the move list.`);
     }
   } catch (error) { $('pgn-error').textContent = error.message; }
   finally { $('pgn-import').disabled = false; }
