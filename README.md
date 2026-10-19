@@ -82,6 +82,10 @@ public repository shows the site's own commits and nothing else from this one.
 GitHub Pages serves `.wasm` as `application/wasm`; the page fetches the module
 and compiles it from bytes anyway, so the content type does not matter.
 
+Pages caches every file for ten minutes. When `style.css` or `app.js` change,
+bump the `?v=` query on their links in `index.html` so a returning visitor never
+pairs a freshly fetched page with a stale stylesheet or script.
+
 ## Deploy to Cloudflare Pages
 
 Direct upload, from the repository root:
