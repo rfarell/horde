@@ -319,13 +319,16 @@ h1, h2, p { margin: 0; }
 
 /* Sidebar ------------------------------------------------------------------ */
 
-/* The sidebar matches the board column's height when it can; when its panels
-   need more room than that, it grows and the page scrolls a little. */
+/* The sidebar is exactly as tall as the board column (board + 163px of strips,
+   toolbar and note), so the move list scrolls inside it. The height breakpoints
+   below hide the graph and the two explanatory lines before the panels would
+   outgrow it; overflow-y is only a safety net. */
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: min(calc(100dvh - 150px), 860px);
+  height: calc(min(680px, 100dvh - 290px) + 163px);
+  overflow-y: auto;
 }
 .control-panel, .engine-panel, .moves-panel {
   background: var(--panel);
@@ -631,22 +634,20 @@ h1, h2, p { margin: 0; }
 @media (min-width: 1500px) {
   .app-shell { max-width: calc(min(720px, 100dvh - 290px) + 503px); }
   .workspace { grid-template-columns: minmax(0, 1fr) 365px; gap: 34px; }
-  .sidebar { gap: 14px; }
-  .game-settings { padding: 14px 18px 16px; gap: 12px; }
-  .engine-panel { padding: 16px 18px 18px; }
+  .sidebar { height: calc(min(720px, 100dvh - 290px) + 163px); }
   .board-note { font-size: 12px; }
 }
 
 /* Short desktop windows ---------------------------------------------------- */
 
-@media (min-width: 881px) and (max-height: 900px) {
+@media (min-width: 881px) and (max-height: 920px) {
   .workspace { padding-top: 10px; }
   .mode-description, .eval-explanation { display: none; }
   .score { font-size: 32px; min-height: 32px; }
   .evaluation-main { padding: 10px 0; }
 }
 
-@media (min-width: 881px) and (max-height: 850px) {
+@media (min-width: 881px) and (max-height: 870px) {
   .graph-wrapper { display: none; }
 }
 
@@ -655,7 +656,7 @@ h1, h2, p { margin: 0; }
   .app-shell { max-width: calc(max(440px, min(680px, 100dvh - 280px)) + 473px); }
   .site-header { height: 54px; }
   .workspace { padding-top: 12px; }
-  .sidebar { min-height: 0; }
+  .sidebar { height: auto; overflow: visible; }
   .moves-panel { flex: none; min-height: 0; }
   .move-list { height: 150px; flex: none; }
   .game-settings { padding: 9px 14px 11px; gap: 7px; }
@@ -671,7 +672,7 @@ h1, h2, p { margin: 0; }
 @media (max-width: 1100px) {
   .app-shell { padding: 0 24px; max-width: none; }
   .workspace { gap: 20px; grid-template-columns: minmax(0, 1fr) 316px; }
-  .sidebar { min-height: 0; }
+  .sidebar { height: auto; overflow: visible; }
   .moves-panel { flex: none; min-height: 0; }
   .move-list { height: 180px; flex: none; }
   .game-settings, .engine-panel { padding-left: 14px; padding-right: 14px; }
