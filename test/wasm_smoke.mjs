@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 // Smoke test for the browser engine: instantiate horde.wasm with the imports
-// worker.js uses, load Bastion-3 at weight 50, and compare the start position's
-// state and a fixed-depth search with the native engine. Only the evaluator
-// metadata (file label) may differ; moves, scores, node counts and principal
-// variations must match exactly, since the compiled code is the same.
+// worker.js uses, load Bastion-4 at weight 100 and Bastion-3 at weight 50, and
+// compare the state and fixed-depth searches with the native engine. Only the
+// evaluator metadata (file label) may differ; moves, scores, node counts and
+// principal variations must match exactly, since the compiled code is the same.
+// Each position is searched after a new game on both sides, then the positions
+// are searched again in sequence without one, which checks that the tables the
+// browser engine keeps between searches match the native engine's.
 //
-//   node site/test/wasm_smoke.mjs            (depth 7, bastion-3 and hce)
+//   node site/test/wasm_smoke.mjs            (depth 7, bastion-4, bastion-3 and hce)
 //   HORDE_DEPTH=9 node site/test/wasm_smoke.mjs
 //
 // Environment: HORDE_WASM (default site/horde.wasm), HORDE_BIN (default
@@ -23,11 +26,10 @@ const root = resolve(here, '../..');
 const wasmPath = process.env.HORDE_WASM || resolve(root, 'site/horde.wasm');
 const binary = process.env.HORDE_BIN || resolve(root, 'target/release/horde');
 const depth = Number(process.env.HORDE_DEPTH || 7);
-const network = 'engines/networks/bastion-3.nnue';
-
 const CONFIGS = [
-  { name: 'bastion-3', network, weight: 50 },
-  { name: 'hce', network: null, weight: 0 }
+  { name: 'bastion-4', network: 'engines/networks/bastion-4.nnue', weight: 100, kind: 'nnue' },
+  { name: 'bastion-3', network: 'engines/networks/bastion-3.nnue', weight: 50, kind: 'blend' },
+  { name: 'hce', network: null, weight: 0, kind: 'handcrafted' }
 ];
 const POSITIONS = [
   { label: 'startpos', fen: START_FEN, moves: '' },
@@ -127,7 +129,7 @@ for (const config of CONFIGS) {
     t0 = performance.now();
     metadata = engine.loadNetwork(networkBytes, config.network, config.weight);
     console.log(`  network loaded in ${(performance.now() - t0).toFixed(1)} ms: ${metadata.label}, ${metadata.description}`);
-    check(metadata.kind === 'blend' && metadata.nnueWeight === config.weight, 'evaluator metadata describes the blend');
+    check(metadata.kind === config.kind && metadata.nnueWeight === config.weight, `evaluator metadata describes the ${config.kind} evaluation`);
   } else {
     metadata = engine.unloadNetwork();
     check(metadata.kind === 'handcrafted', 'evaluator metadata is handcrafted');
@@ -153,8 +155,9 @@ for (const config of CONFIGS) {
     check(same(rest, native), `state matches native inspect (${native.legal.length} legal moves, status ${native.status})`);
     check(same(evaluator, metadata), 'state carries the evaluator metadata');
 
-    // Search: compare every iteration and the best move.
+    // Search from a new game: compare every iteration and the best move.
     const infos = [];
+    engine.newGame();
     t0 = performance.now();
     const final = engine.search(position.fen, position.moves, { timeMs: 0, depth, onInfo: info => infos.push(info) });
     const wasmMs = performance.now() - t0;
@@ -183,6 +186,19 @@ for (const config of CONFIGS) {
     check(infos.every(info => same(info.evaluator, metadata)), 'iterations carry the evaluator metadata');
     const wasmNps = Math.round(final.nodes / Math.max(wasmMs, 1) * 1000);
     console.log(`  wasm ${wasmMs.toFixed(0)} ms, ${wasmNps} nodes/s (final document nps ${final.nps}); native ${nativeNps} nodes/s`);
+  }
+
+  // Searches in sequence keep their tables on both sides.
+  engine.newGame();
+  uci.send('ucinewgame');
+  for (const position of [...POSITIONS, ...POSITIONS]) {
+    const document = engine.search(position.fen, position.moves, { timeMs: 0, depth });
+    uci.send(`position startpos${position.moves ? ' moves ' + position.moves : ''}`);
+    uci.send(`go depth ${depth}`);
+    const lines = await uci.until('bestmove');
+    const nativeFinal = lines.filter(line => line.startsWith('info depth')).map(parseInfo).pop();
+    check(document.nodes === nativeFinal.nodes && document.bestMove === lines[lines.length - 1].split(' ')[1],
+      `retained tables: ${position.label} ${document.nodes} nodes, ${document.bestMove}, as native`);
   }
   await uci.quit();
 }

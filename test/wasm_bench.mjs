@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Throughput of horde.wasm against the native engine: a fixed-depth search of
-// the start position with Bastion-3 at weight 50 and with the handcrafted
-// evaluation. Both engines visit the same nodes, so nodes per second compares
+// the start position with the site's default network (Bastion-4 at weight 100)
+// and with the handcrafted evaluation. Both engines visit the same nodes, so nodes per second compares
 // the code generation alone.
 //
 //   node site/test/wasm_bench.mjs [depth]           (default depth 11)
 //   HORDE_WASM=path/to/horde.wasm node site/test/wasm_bench.mjs
+//   HORDE_NETWORK=engines/networks/bastion-3.nnue HORDE_WEIGHT=50 node site/test/wasm_bench.mjs
 
 import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -19,7 +20,9 @@ const root = resolve(here, '../..');
 const wasmPath = process.env.HORDE_WASM || resolve(root, 'site/horde.wasm');
 const binary = process.env.HORDE_BIN || resolve(root, 'target/release/horde');
 const depth = Number(process.argv[2] || 11);
-const network = 'engines/networks/bastion-3.nnue';
+const network = process.env.HORDE_NETWORK || 'engines/networks/bastion-4.nnue';
+const weight = Number(process.env.HORDE_WEIGHT || 100);
+const networkLabel = `${network.split('/').pop().replace('.nnue', '')} @${weight}`;
 
 const engine = await Horde.instantiate(await WebAssembly.compile(readFileSync(wasmPath)));
 
@@ -38,15 +41,17 @@ function nativeSearch(withNetwork) {
       }
     });
     const commands = ['uci'];
-    if (withNetwork) commands.push(`setoption name EvalFile value ${network}`, 'setoption name UseNNUE value true', 'setoption name NNUEWeight value 50');
+    if (withNetwork) commands.push(`setoption name EvalFile value ${network}`, 'setoption name UseNNUE value true', `setoption name NNUEWeight value ${weight}`);
     commands.push('ucinewgame', 'position startpos', `go depth ${depth}`);
     child.stdin.write(commands.join('\n') + '\n');
   });
 }
 
 function wasmSearch() {
-  // Warm once (first allocation of the 16 MB hash grows the memory), then time.
+  // Warm once (first allocation of the 16 MB hash grows the memory), clear the
+  // tables the warm-up left, then time.
   engine.search(START_FEN, '', { timeMs: 0, depth: Math.min(depth, 6) });
+  engine.newGame();
   const start = performance.now();
   const result = engine.search(START_FEN, '', { timeMs: 0, depth });
   const ms = performance.now() - start;
@@ -54,8 +59,8 @@ function wasmSearch() {
 }
 
 console.log(`${wasmPath} (${readFileSync(wasmPath).length} bytes), start position, depth ${depth}`);
-for (const [label, withNetwork] of [['bastion-3 @50', true], ['hce', false]]) {
-  if (withNetwork) engine.loadNetwork(readFileSync(resolve(root, network)), network, 50); else engine.unloadNetwork();
+for (const [label, withNetwork] of [[networkLabel, true], ['hce', false]]) {
+  if (withNetwork) engine.loadNetwork(readFileSync(resolve(root, network)), network, weight); else engine.unloadNetwork();
   const wasm = wasmSearch();
   const native = await nativeSearch(withNetwork);
   const ratio = (wasm.nps / native.nps * 100).toFixed(0);

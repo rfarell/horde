@@ -8,12 +8,13 @@
   <title>Horde · Engine studio</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%234e7a3a'/%3E%3Cpath d='M8 20v8h4v-8l-1-4h-2zM14 12v16h4V12l-1-5h-2zM20 20v8h4v-8l-1-4h-2z' fill='%23ffffff'/%3E%3C/svg%3E">
   <!-- GitHub Pages caches files for ten minutes; bump ?v= when these change so a
-       visitor never pairs a new page with an old stylesheet or script. -->
+       visitor never pairs a new page with an old stylesheet or script. The
+       engine files carry the same number in app.js, engine.js and worker.js. -->
   <link rel="stylesheet" href="./style.css?v=3">
-  <link rel="modulepreload" href="./engine.js">
-  <link rel="preload" href="./horde.wasm" as="fetch" crossorigin>
-  <link rel="preload" href="./networks/bastion-3.nnue" as="fetch" crossorigin>
-  <script type="module" src="./app.js?v=3"></script>
+  <link rel="modulepreload" href="./engine.js?v=4">
+  <link rel="preload" href="./horde.wasm?v=4" as="fetch" crossorigin>
+  <link rel="preload" href="./networks/bastion-4.nnue" as="fetch" crossorigin>
+  <script type="module" src="./app.js?v=4"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -54,7 +55,7 @@
             </div>
             <div class="game-settings">
               <div class="setting-row" id="side-setting"><span class="setting-label">You play</span><div class="side-switch" role="group" aria-label="Your side"><button id="side-white" class="active" aria-pressed="true"><span class="side-token white-token"></span> Horde</button><button id="side-black" aria-pressed="false"><span class="side-token black-token"></span> Army</button></div></div>
-              <div class="setting-row"><label class="setting-label" for="engine-select">Engine</label><div class="select-wrap"><select id="engine-select"><option value="hce">HCE</option><option value="bastion-1">Bastion-1</option><option value="bastion-2">Bastion-2</option><option value="bastion-3" selected>Bastion-3</option><option value="student-250ms">Student-250ms</option></select><span data-icon="chevron-down"></span></div></div>
+              <div class="setting-row"><label class="setting-label" for="engine-select">Engine</label><div class="select-wrap"><select id="engine-select"><option value="hce">HCE</option><option value="bastion-1">Bastion-1</option><option value="bastion-2">Bastion-2</option><option value="bastion-3">Bastion-3</option><option value="student-250ms">Student-250ms</option><option value="bastion-4" selected>Bastion-4</option></select><span data-icon="chevron-down"></span></div></div>
               <div class="setting-row"><label class="setting-label" for="think-time">Time per move</label><div class="select-wrap"><select id="think-time"><option value="100">0.1 s</option><option value="250" selected>0.25 s</option><option value="500">0.5 s</option><option value="1000">1 s</option><option value="3000">3 s</option><option value="10000">10 s</option></select><span data-icon="chevron-down"></span></div></div>
               <p class="mode-description" id="mode-description">You play the horde. The engine answers each move.</p>
             </div>

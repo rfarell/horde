@@ -2,19 +2,21 @@
 // (worker.js, horde.wasm) and the page talks to it through engine.js. The
 // board, game and analysis behaviour follow web/app.js, which drives the same
 // engine over the local HTTP server.
-import { EngineHost } from './engine.js';
+import { EngineHost } from './engine.js?v=4';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1';
 const STORAGE_KEY = 'horde-studio-web-v1';
-const DEFAULT_ENGINE = 'bastion-3';
-// The bundled engines. Networks play at weight 50, as they were trained and
-// rated; engines.json adds descriptions and ratings when it loads.
+const DEFAULT_ENGINE = 'bastion-4';
+// The bundled engines, each network at the weight it was trained and rated
+// at: Bastion-1 to 3 blend with the handcrafted evaluation at 50, Bastion-4 is
+// purely neural. engines.json adds descriptions and ratings when it loads.
 const ENGINES = {
   hce: { label: 'HCE', network: null, weight: 0 },
   'bastion-1': { label: 'Bastion-1', network: './networks/bastion-1.nnue', weight: 50 },
   'bastion-2': { label: 'Bastion-2', network: './networks/bastion-2.nnue', weight: 50 },
   'bastion-3': { label: 'Bastion-3', network: './networks/bastion-3.nnue', weight: 50 },
-  'student-250ms': { label: 'Student-250ms', network: './networks/student-250ms.nnue', weight: 50 }
+  'student-250ms': { label: 'Student-250ms', network: './networks/student-250ms.nnue', weight: 50 },
+  'bastion-4': { label: 'Bastion-4', network: './networks/bastion-4.nnue', weight: 100 }
 };
 const $ = id => document.getElementById(id);
 const FILES = 'abcdefgh';
@@ -114,7 +116,7 @@ function persist() {
       startFen: model.startFen, moves: model.line.map(move => move.uci), cursor: model.cursor,
       mode: model.mode, humanSide: model.humanSide, flipped: model.flipped, time: model.time, engine: model.engine,
       scores: Array.from(model.scores).slice(-300), result: model.result, resignedSide: model.resignedSide,
-      evaluatorKey: model.evaluatorKey
+      evaluatorKey: model.evaluatorKey, defaultEngine: DEFAULT_ENGINE
     }));
   } catch { /* Private browsing and a full storage quota must not interrupt a game. */ }
 }
@@ -132,6 +134,8 @@ function stopReview() {
 async function position({ startFen = model.startFen, moves = model.line.map(m => m.uci), cursor = moves.length, preserveFuture = false, mode = model.mode, clearScores = false, autoAnalyze = true } = {}) {
   stopAnalysis();
   stopReview();
+  // A new game, position or import starts the engine's tables afresh.
+  if (clearScores) host.newGame().catch(() => {});
   const version = ++requestVersion;
   model.loading = true;
   model.selected = null;
@@ -587,7 +591,7 @@ async function setEngine(name) {
 }
 async function loadCatalogue() {
   try {
-    const response = await fetch('./engines.json');
+    const response = await fetch('./engines.json?v=4');
     if (!response.ok) return;
     const catalogue = await response.json();
     for (const [name, entry] of Object.entries(catalogue.engines || {})) {
@@ -801,7 +805,8 @@ async function initialize() {
     model.humanSide = saved.humanSide === 'b' ? 'b' : 'w';
     model.flipped = !!saved.flipped;
     model.time = [100, 250, 500, 1000, 3000, 10000].includes(saved.time) ? saved.time : 250;
-    model.engine = ENGINES[saved.engine] ? saved.engine : DEFAULT_ENGINE;
+    // A choice saved under an earlier default gives way to the new default once.
+    model.engine = ENGINES[saved.engine] && saved.defaultEngine === DEFAULT_ENGINE ? saved.engine : DEFAULT_ENGINE;
     model.evaluatorKey = typeof saved.evaluatorKey === 'string' ? saved.evaluatorKey : null;
     if (Array.isArray(saved.scores)) model.scores = new Map(saved.scores.filter(entry => Array.isArray(entry) && typeof entry[0] === 'string' && Number.isFinite(entry[1])));
   }

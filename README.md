@@ -2,8 +2,8 @@
 
 The engine compiled to WebAssembly, running in a Web Worker behind the same
 board as `web/`. Everything is static: no server code, no build step at deploy
-time, no third-party scripts. Pick an engine (HCE, Bastion-1, Bastion-2,
-Bastion-3, Student-250ms), play either colour, undo, start a new game, import
+time, no third-party scripts. Pick an engine (Bastion-4 by default, or HCE,
+Bastion-1 to 3 and Student-250ms), play either colour, undo, start a new game, import
 and export PGN, review a game, and watch the search report each iteration.
 
 Play it at <https://rfarell.github.io/horde/>. That site is this folder, mirrored
@@ -17,9 +17,9 @@ to the public repository `rfarell/horde` and served by GitHub Pages.
 | `engine.js` | Downloads and compiles `horde.wasm` once, fetches networks, and manages the worker (one per evaluator configuration). |
 | `worker.js` | Runs the engine: `state`, `search` and `import` requests, `info` messages during a search. |
 | `horde.js` | DOM-free binding for `horde.wasm`, shared by the worker and the Node tests. |
-| `horde.wasm` | The engine, built with `simd128` (220 KB). |
+| `horde.wasm` | The engine, built with `simd128` (395 KB). |
 | `horde-nosimd.wasm` | Scalar fallback for browsers without WebAssembly SIMD (Safari before 16.4). `engine.js` picks one at load. |
-| `networks/*.nnue` | The four bundled networks, 370 KB each, copied from `engines/networks/`. |
+| `networks/*.nnue` | The bundled networks, copied from `engines/networks/`: Bastion-4 (1.76 MB) and four of 370 KB. |
 | `engines.json` | Descriptions and ratings for the picker, copied from `engines/engines.json`. |
 | `_headers` | Cloudflare Pages response headers. |
 | `.nojekyll` | Tells GitHub Pages to serve the folder as is (Jekyll would drop `_headers`). |
@@ -50,11 +50,14 @@ node site/test/wasm_bench.mjs 11     # throughput at depth 11
 ```
 
 The smoke test instantiates `horde.wasm` with the worker's imports, loads
-Bastion-3 at weight 50 and then the handcrafted evaluation, and for two
-positions compares the `state` document with `horde inspect` and every
-iteration of a depth-7 search (best move, score, node count, principal
-variation) with `go depth 7` over UCI. They must match exactly: the search is
-deterministic at a fixed depth and the compiled code is the same.
+Bastion-4 at weight 100, Bastion-3 at weight 50 and the handcrafted
+evaluation, and for two positions compares the `state` document with `horde
+inspect` and every iteration of a depth-7 search from a new game (best move,
+score, node count, principal variation) with `go depth 7` over UCI after
+`ucinewgame`. It then searches the positions again in sequence on both sides
+without a new game, so the tables kept between searches are checked too. They
+must match exactly: the search is deterministic at a fixed depth and the
+compiled code is the same.
 
 ## Run locally
 
@@ -82,9 +85,11 @@ public repository shows the site's own commits and nothing else from this one.
 GitHub Pages serves `.wasm` as `application/wasm`; the page fetches the module
 and compiles it from bytes anyway, so the content type does not matter.
 
-Pages caches every file for ten minutes. When `style.css` or `app.js` change,
-bump the `?v=` query on their links in `index.html` so a returning visitor never
-pairs a freshly fetched page with a stale stylesheet or script.
+Pages caches every file for ten minutes. When the page's files change, bump
+the `?v=` numbers so a returning visitor never pairs a freshly fetched page with
+a stale stylesheet, script or engine: `style.css`, `app.js`, `engine.js` and
+`horde.wasm` in `index.html`, `engine.js` and `engines.json` in `app.js`, the
+modules and the worker in `engine.js`, and `horde.js` in `worker.js`.
 
 ## Deploy to Cloudflare Pages
 
@@ -116,13 +121,22 @@ for its whole time budget, so there is no stop signal: to abandon a search
 (the user moved, changed the time, or switched engine) the page terminates the
 worker and starts another from the cached module and bytes. Requests in flight
 when that happens reject with an `AbortError`, which the board treats as stale.
-Each search uses a fresh 16 MB hash table, exactly as the local server does for
-each analysis.
+The worker keeps one searcher and its tables and histories from one search to
+the next, as the native engine does between the moves of a game; the engine was
+tuned and measured that way. Replaying 480 positions from eight games, every
+ply searched to a fixed depth, a fresh table for each search (as this site did
+until October 2026) took 2.4 times the nodes at depth 14 and 2.7 times at depth
+18. A new game, position or import clears the tables (`new_game`), and a new
+worker starts with empty ones. The table is 16 MiB up to 1 s per move, the size
+the engine was tuned with (64 and 128 MiB saved no nodes at depth 18, about
+1.2M nodes a search), and 32 and 64 MiB at the 3 s and 10 s settings, which
+search several million nodes.
 
 The exported surface (`src/wasm.rs`): `alloc`/`dealloc` for request buffers;
 `load_network(bytes, name, weight)`, `unload_network()`, `set_nnue_weight(w)`;
 `state(fen, moves)`; `search(fen, moves, time_ms, max_depth)`, which reports
-each iteration through the imported `horde.on_info(ptr, len)`; `import_pgn`.
+each iteration through the imported `horde.on_info(ptr, len)`; `new_game()`;
+`import_pgn`.
 Every call returns 0 or 1 and leaves one JSON document behind
 `result_ptr`/`result_len`. The search clock is the imported `horde.now_ms`,
 `performance.now()` in the worker. The JSON is built by `src/api.rs`, the same
@@ -146,3 +160,10 @@ board reports about 1.1 Mnps with Bastion-3 and reaches depth 9 from the start
 position. Loading: `horde.wasm` compiles in about 1 ms and a network parses in
 about 4 ms; the first visit downloads 220 KB for the module and 370 KB per
 network.
+
+October 2026, with today's search and Bastion-4 at weight 100 (start position,
+depth 12, 261,365 nodes, `node site/test/wasm_bench.mjs 12`, three runs): wasm
+with `+simd128` 0.77–0.91 Mnps against native 1.75–2.23 Mnps (41–44%); the
+scalar fallback 0.35–0.37 Mnps. The handcrafted evaluation runs at 53–70% of
+native. Bastion-4 is eight times as wide as Bastion-3, so the first visit now
+downloads 1.76 MB for it and about 395 KB for the module.

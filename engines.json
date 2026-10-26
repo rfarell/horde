@@ -1,7 +1,7 @@
 {
   "schema": "horde-engines-v1",
-  "default": "bastion-3",
-  "rating_source": "18-engine round robin, 2026-09-13: 512 games per pair at 250 ms/move, BayesElo with bastion-1 = 2000",
+  "default": "bastion-4",
+  "rating_source": "18-engine round robin, 2026-09-13: 512 games per pair at 250 ms/move, BayesElo with bastion-1 = 2000, all with the classic search; today's search plays every engine stronger",
   "engines": {
     "hce": {
       "description": "Hand-coded evaluation (engine v067) with alpha-beta search; the generation-0 teacher",
@@ -35,6 +35,12 @@
       "sha256": "45d811b0537d5190d68a592cd3542b781a4b64795f3f2ab198caa1799b74615e",
       "nnue_weight": 50,
       "rating": 2127
+    },
+    "bastion-4": {
+      "description": "1024 wide, purely neural, fit on 225.4M positions mostly labeled at 250 ms/search; with the four-rule search, +187 Elo over Bastion-3 with the classic search and +75 over Fairy-Stockfish at 250 ms/move, and the October 2026 search adds about +110 more. Not in the round robin",
+      "network": "networks/bastion-4.nnue",
+      "sha256": "068302a82b9805c8578c6d34999a218947b7239a36d0c1086b5a0ee6513d932e",
+      "nnue_weight": 100
     }
   }
 }

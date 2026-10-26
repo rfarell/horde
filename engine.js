@@ -4,7 +4,8 @@
 // (network file and weight) runs in a fresh worker. A search blocks the worker
 // for its whole budget and cannot be interrupted, so `cancel` terminates a
 // busy worker and starts another from the compiled module and cached network
-// bytes, which takes a few milliseconds. Requests sent while a worker starts
+// bytes, which takes a few milliseconds; the new worker starts with empty
+// search tables. Requests sent while a worker starts
 // wait for it; requests in flight when it is terminated reject with an
 // AbortError, which callers treat as "stale".
 
@@ -17,7 +18,8 @@ function abortError(message = 'The request was abandoned.') {
 }
 
 export class EngineHost {
-  constructor({ wasm = './horde.wasm', fallback = './horde-nosimd.wasm', workerUrl = './worker.js', onStatus = () => {} } = {}) {
+  // The ?v= queries match index.html; bump them together when these files change.
+  constructor({ wasm = './horde.wasm?v=4', fallback = './horde-nosimd.wasm?v=4', workerUrl = './worker.js?v=4', onStatus = () => {} } = {}) {
     this.wasmUrl = wasm;
     this.fallbackUrl = fallback;
     this.workerUrl = workerUrl;
@@ -157,4 +159,7 @@ export class EngineHost {
   }
 
   importPgn(pgn) { return this.request({ type: 'import', pgn }); }
+
+  /** Clear the search tables the worker keeps between searches. */
+  newGame() { return this.request({ type: 'newGame' }); }
 }

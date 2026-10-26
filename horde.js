@@ -95,6 +95,11 @@ export class Horde {
     }
   }
 
+  /** Forget the search tables and histories kept from earlier searches, before a new game. */
+  newGame() {
+    return this.call('new_game');
+  }
+
   /** Parse one Horde PGN game into `startFen`, `moves`, `result` and `tags`. */
   importPgn(pgn) {
     return this.withText([pgn], p => this.call('import_pgn', p.ptr, p.len));
